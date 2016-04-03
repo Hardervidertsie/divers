@@ -7,29 +7,57 @@ output: html_document
 
 # Het rechter spectrum van BI
 ==============================
- ## (on)zekerheid, visualizatie,  groeperen, predictie 
+ ## significantie, visualizatie,  groeperen, predictie 
+ *** De statistische taal 'R' kan aangeroepen vanuit Diver.
+ *** Enkele kleine voorbeeldjes over het gebruik van R om meer inzicht in data te krijgen. 
 
 ### Salaris dataset. 10 metingen die mogelijk invloed hebben op salaris.
 ### Autostoeltjes verkoop dataset. Verkoop data van 400 winkels en 10 metingen die mogelijk invloed hebben op de verkoop
 
 
-
- # 1: (on) zekerheid
- 
+ # 1: significantie
  * Het kwantificeren van hoe zeker we zijn over een meting of voorspelling
-
-Is er een verschil in het gemiddelde inkomen tussen mannen en vrouwen
+ ** Is er een verschil in het gemiddelde inkomen tussen mannen en vrouwen met gelijke werkervaring?
+ ** Betekent dit verschil iets? (is het significant)
+ 
+ 
 
 ```{r, echo =FALE}
-data(Wage, package = "ISLR")
-head(Wage)
-dim(Wage)
+#http://www.statmethods.net/advgraphs/parameters.html
+list.of.packages <- c("Ecdat", "ggplot2")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+
+# over wine dataset gebruiken
+
+data(Wages, package = "Ecdat")
+
+head(Wages)
+dim(Wages)
+??Wages
+
+plot(lwage ~ exp , data = Wages, col = sex, pch = 19, cex = 0.5)
+
+Wages$sex <- factor(Wages$sex, levels = c("male", "female"))
+p<-ggplot( data = Wages, aes( x = exp, y = lwage, col = sex )) + 
+  geom_jitter(aes( size = sex), alpha= 0.5) + theme_minimal()
+
+print(p)
+
+p + geom_smooth(level = 0.975, alpha = 0.75) # limieten waarin je werkelijke gemiddelde 0.975 keer in zit.
+
+
+
 
 
 
 
 
 ```
+
+
+ 
 
 
  # 2: visualizatie & groeperen
@@ -42,6 +70,33 @@ data(Carseats, package = "ISLR")
 head(Carseats)
 dim(Carseats)
 
+library(NMF)
+# pca (visualizatie) van Wages? de numerieke? exp wks ind south married sex etc etc allemaal binair 
+Wages.num <- Wages[ , c("exp", "wks", "ind", "ed", "lwage")]
+pr.out <- prcomp(Wages.num, family = 'binomial', scale. = TRUE )
+
+biplot(pr.out, xlabs=rep(".", nrow(Wages.num)), col = as.numeric(Wages$sex), cex = 2)
+
+
+# hier cluster (visualizatie/ groeperen)
+install.packages("devtools")
+library(devtools)
+
+install_github("vqv/ggbiplot")
+
+library(ggbiplot)
+data(wine)
+head(wine)
+?wine
+wine.pca <- prcomp(wine, scale. = TRUE)
+ggbiplot(wine.pca, obs.scale = 1, var.scale = 1,
+  groups = wine.class, ellipse = TRUE, circle = TRUE) +
+  scale_color_discrete(name = '') +
+  theme(legend.direction = 'horizontal', legend.position = 'top')
+
+
+wine.pca <- prcomp(wine, scale. = TRUE)
+print(ggbiplot(wine.pca, obs.scale = 1, var.scale = 1, groups = wine.class, ellipse = TRUE, circle = TRUE))
 
 
 ```
