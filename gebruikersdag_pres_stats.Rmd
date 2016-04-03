@@ -99,15 +99,24 @@ wine.pca <- prcomp(wine, scale. = TRUE)
 print(ggbiplot(wine.pca, obs.scale = 1, var.scale = 1, groups = wine.class, ellipse = TRUE, circle = TRUE))
 
 
+install.packages("NMF")
+require(NMF)
+head(wine)
+w.class <- list(wine.class = wine.class)
+aheatmap(  wine, scale = 'column', annRow = w.class)
+
+
 ```
 
 
  # 3: predictie
  
   * Het gebruik van bestaande data om iets te voorspellen over het onbekende.
+  * Alles meten zou duur kunnen zijn, wat moeten we minimaal meten voor een goede predictie?
   
 ```{r, echo=FALSE, eval= FALSE}
   
+# random forrest en variable importance plot ( voorbeeld ISL)
   
 ```  
   
