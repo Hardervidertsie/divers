@@ -1,0 +1,60 @@
+---
+title: "gebruikersdag"
+author: "Steven Wink"
+date: "April 3, 2016"
+output: html_document
+---
+
+# Het rechter spectrum van BI
+==============================
+ ## (on)zekerheid, visualizatie,  groeperen, predictie 
+
+### Salaris dataset. 10 metingen die mogelijk invloed hebben op salaris.
+### Autostoeltjes verkoop dataset. Verkoop data van 400 winkels en 10 metingen die mogelijk invloed hebben op de verkoop
+
+
+
+ # 1: (on) zekerheid
+ 
+ * Het kwantificeren van hoe zeker we zijn over een meting of voorspelling
+
+Is er een verschil in het gemiddelde inkomen tussen mannen en vrouwen
+
+```{r, echo =FALE}
+data(Wage, package = "ISLR")
+head(Wage)
+dim(Wage)
+
+
+
+
+
+```
+
+
+ # 2: visualizatie & groeperen
+  
+  * Voor het leren kennen van een dataset 
+  * Tot nieuwe inzichten komen
+  
+```{r, echo=FALSE, eval= FALSE}
+data(Carseats, package = "ISLR")
+head(Carseats)
+dim(Carseats)
+
+
+
+```
+
+
+ # 3: predictie
+ 
+  * Het gebruik van bestaande data om iets te voorspellen over het onbekende.
+  
+```{r, echo=FALSE, eval= FALSE}
+  
+  
+```  
+  
+  
+  
