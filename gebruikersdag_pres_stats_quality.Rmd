@@ -1,0 +1,234 @@
+---
+title: "gebruikersdag"
+author: "Steven Wink"
+date: "April 3, 2016"
+output: html_document
+---
+
+# Het rechter spectrum van BI
+==============================
+ ## significantie, visualizatie,  groeperen, predictie 
+ *** De statistische taal 'R' kan aangeroepen worden vanuit Diver.
+ *** Enkele kleine voorbeeldjes over het gebruik van R om meer inzicht in data te krijgen. 
+
+### Salaris dataset. 10 metingen die mogelijk invloed hebben op salaris.
+### Autostoeltjes verkoop dataset. Verkoop data van 400 winkels en 10 metingen die mogelijk invloed hebben op de verkoop
+
+
+ # 1: significantie
+ * Het kwantificeren van hoe zeker we zijn over een meting of voorspelling
+ ** Is er een verschil in het alcohol gehalte tussen de verschillende wijn soorten?
+ ** Betekent dit verschil iets? (is het significant)
+ ** Welke meting hangt hangt nou samen met Alcohol percentage, en is dit gelijk voor de drie wijnsoorten?
+
+
+
+```{r, echo =FALE}
+#http://www.statmethods.net/advgraphs/parameters.html
+list.of.packages <- c("devtools", "ggplot2", "NMF")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library(devtools)
+library(ggplot2)
+#install_github("vqv/ggbiplot")
+library(ggbiplot)
+library(NMF)
+
+
+red <- read.csv('http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv', header = TRUE, sep = ';')
+white <- read.csv('http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv', header = TRUE, sep = ';')
+
+dim(red)
+?sample
+red$quality
+
+# sample equal amount of each quality
+red <- red[ order(red$quality), ]
+table(red$quality)
+# merge quality 3 and 4
+# merge quality 7 and 8
+red[ red$quality == 3, ]$quality <- 4
+red[ red$quality == 8, ]$quality <- 7
+
+# sample 100 of each (with replacement (in de trend van bootstrap))
+set.seed(1)
+
+#class4 <- 1/ table(red$quality)[1] / sum(table(red$quality))
+#class5 <- 1 / table(red$quality)[2] / sum(table(red$quality))
+#class6 <- 1/ table(red$quality)[3] / sum(table(red$quality))
+#class7 <- 1/ table(red$quality)[4] / sum(table(red$quality))
+
+#ind <- sample(1:nrow(red), 800, replace = TRUE, prob = c( rep(class4, 63), rep(class5, 681), rep(class6, 638), rep(class7, 217)))
+#table(ind)
+#red.s <- red[ind, ]
+
+table(red$quality)
+red$quality <- factor(red$quality)
+red$type <- "red"
+
+
+white <- white[ order(white$quality), ]
+table(white$quality)
+# merge quality 3 and 4
+# merge quality 7 and 8 and 9
+white[ white$quality == 3, ]$quality <- 4
+white[ white$quality == 8 | white$quality == 9, ]$quality <- 7
+
+# sample 100 of each (with replacement (in de trend van bootstrap))
+set.seed(1)
+
+#class4 <- 1/ table(white$quality)[1] / sum(table(white$quality))
+#class5 <- 1 / table(white$quality)[2] / sum(table(white$quality))
+#class6 <- 1/ table(white$quality)[3] / sum(table(white$quality))
+#class7 <- 1/ table(white$quality)[4] / sum(table(white$quality))
+
+#ind <- sample(1:nrow(white), 800, replace = TRUE, prob = c( rep(class4, 183), rep(class5, 1457), rep(class6, 2198), rep(class7, 1060)))
+table(ind)
+#white.s <- white[ind, ]
+
+table(white.s$quality)
+white$quality <- factor(white$quality)
+white$type <- "white"
+Wine <- rbind(red ,white)
+Wine$type <- factor(Wine$type)
+```
+
+Om het antwoord te vinden, zouden we simpelweg het gemiddelde kunnen berekenen:
+```{r }
+
+
+
+aggregate(alcohol  ~ quality + type, data = Wine, FUN = mean)
+
+
+```
+
+
+
+```{r }
+
+
+p <- ggplot(data = Wine, aes( x = quality, y = alcohol )) + geom_jitter(aes(color = type), size = 2) + theme_minimal() 
+print(p)
+p  +  ylim(c(0,20))
+
+lm.out <- lm( alcohol ~ quality, data = Wine) 
+summary(lm.out) 
+
+
+```
+
+
+Welke meting hangt het meest samen met alcohol percentage?
+Is dit onafhankelijk van het soort druif?
+
+
+```{r}
+
+# volgende hoogste correlaties met kwaliteit? hoe verhouden deze zich dan? is er een optimale combinatie van deze?
+Wine.n <- Wine
+Wine.n$quality <- as.integer(Wine.n$quality)
+
+cor(Wine.n[, -13])[,12] # bijvoorbeeld hoge chlorides  en laat sulphates
+
+p <- ggplot(data = Wine, aes( x = as.numeric(as.character(quality)), y = volatile.acidity, color = type )) + geom_jitter(size= 3, alpha = 0.5) + theme_minimal() 
+print(p) 
+p + geom_smooth(method = 'lm')  # meer chorlide vaak ook meer sulphates, dit is echter niet afhankelijk van kwaliteit
+
+# non linear method
+
+
+
+glm.out <- glm(data = red.s,    volatile.acidity + alcohol ~ quality  )
+summary(glm.out) # volatile.acidity en alcohol percentage kan verschil verklaren tussen slechtste en hoogste kwaliteit wijn
+
+
+# om te laten zien dat veel dimenties zijn:
+pairs(Wine, col = red$quality-3) # ook hier moelijkt te zien - dimensie reductie
+
+```
+
+
+ 
+ # 2: visualizatie & groeperen
+  
+  * Hoe kunnen wij nu alle alle 13 variabelen grafisch weergeven? 
+  * Exploratie/ nieuwe inzichten
+  * quality control van individuele druif batchen
+  
+```{r, echo=FALSE, eval= FALSE}
+
+
+wine.pca <- prcomp(Wine[,-c(12,13)], scale. = TRUE)
+
+
+ggbiplot(wine.pca, obs.scale = 2, var.scale = 1,
+  ellipse = TRUE, circle = TRUE, varname.size = 6) +
+  scale_color_discrete(name = '') + theme_minimal() + 
+  theme(legend.direction = 'horizontal', legend.position = 'top')
+
+ ggbiplot(wine.pca, obs.scale = 1, var.scale = 1,
+  ellipse = TRUE, circle = TRUE,
+  group = as.factor(Wine[, 12]), varname.size = 6, ) +
+  scale_color_discrete(name = '') + theme_minimal() + ylim(c(-5,5)) + xlim( c(-5,5)) + 
+  theme(legend.direction = 'horizontal', legend.position = 'top')  
+
+ 
+ ggbiplot(wine.pca, obs.scale = 1, var.scale = 1,
+  ellipse = TRUE, circle = TRUE,
+  group = as.factor(Wine[, 13]), varname.size = 6, ) +
+  scale_color_discrete(name = '') + theme_minimal() + ylim(c(-5,5)) + xlim( c(-5,5)) + 
+  theme(legend.direction = 'horizontal', legend.position = 'top')  
+ 
+ 
+wine.class <- data.frame( wine.class = wine.class)
+
+
+
+
+
+install.packages("pheatmap")
+require(pheatmap)
+
+
+RedW <- Wine[Wine$type == "red",]
+
+set.seed(12345)
+indd<-sample(1:nrow(RedW), 300, replace = F)
+annColors = list(quality = c("orange", "red", "pink", "purple"))
+anR <- data.frame( quality = RedW[,12, drop= F])
+
+aheatmap(  RedW[indd,-c(12,13)], scale = 'column', annRow = anR[indd,, drop= FALSE],Colv = NA, annColors =   annColors,
+           distfun = "manhattan")
+
+RedW[indd,-c(12,13)][, "alcohol"] <- 100*RedW[indd,-c(12,13)][, "alcohol"]
+
+aheatmap(  RedW[indd,-c(12,13)], scale = 'column', annRow = anR[indd,, drop= FALSE],Colv = NA, annColors =   annColors,
+           distfun = "manhattan")
+
+
+
+
+```
+
+ # 3: predictie
+  * Wij willen graag voorspellen welke kwaliteit we mee te maken hebben adv de het minimale set chemische eigenschappen van de druif.
+  * Het gebruik van bestaande data om iets te voorspellen over het onbekende.
+  * Alles meten zou duur kunnen zijn, wat moeten we minimaal meten voor een goede predictie?
+  * Hoe goed is onze predictie?
+  * Voor de gein: predictie van rode/ witte wijn
+  
+  ## Hier gebruiken wij een andere dataset voor het predictie doeleinde: kwaliteit van wijn
+```{r, echo=FALSE, eval= FALSE}
+  
+# random forrest en variable importance plot ( voorbeeld ISL)
+  #http://jackaljack.github.io/wine-classification-with-R/
+# vooral de variabele selectie en de predictie nauwkeurigheid voor kwaliteit en type druif
+
+
+
+```  
+  
+  
+  
