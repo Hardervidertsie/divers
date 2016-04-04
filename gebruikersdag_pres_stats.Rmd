@@ -7,8 +7,8 @@ output: html_document
 
 # Het rechter spectrum van BI
 ==============================
- ## significantie, visualizatie,  groeperen, predictie 
- *** De statistische taal 'R' kan aangeroepen vanuit Diver.
+ ## 1: significantie, 2: visualizatie,  3: groeperen, 4: predictie 
+ *** De statistische taal 'R' kan aangeroepen worden vanuit Diver.
  *** Enkele kleine voorbeeldjes over het gebruik van R om meer inzicht in data te krijgen. 
 
 ### Salaris dataset. 10 metingen die mogelijk invloed hebben op salaris.
@@ -17,40 +17,71 @@ output: html_document
 
  # 1: significantie
  * Het kwantificeren van hoe zeker we zijn over een meting of voorspelling
- ** Is er een verschil in het gemiddelde inkomen tussen mannen en vrouwen met gelijke werkervaring?
+ ** Is er een verschil in het alcohol gehalte tussen de verschillende wijn soorten?
  ** Betekent dit verschil iets? (is het significant)
  
- 
 
-```{r, echo =FALE}
+
+
+```{r, echo =FALSE}
+rm(list=ls())
 #http://www.statmethods.net/advgraphs/parameters.html
-list.of.packages <- c("Ecdat", "ggplot2")
+list.of.packages <- c("devtools", "ggplot2", "NMF")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
+library(devtools)
+library(ggplot2)
+#install_github("vqv/ggbiplot")
+library(ggbiplot)
+library(NMF)
 
-# over wine dataset gebruiken
+data(wine)
 
-data(Wages, package = "Ecdat")
+wine.c <- cbind(wine,wine.class)
+```
 
-head(Wages)
-dim(Wages)
-??Wages
+Om het antwoord te vinden, zouden we simpelweg het gemiddelde kunnen berekenen:
+```{r }
 
-plot(lwage ~ exp , data = Wages, col = sex, pch = 19, cex = 0.5)
 
-Wages$sex <- factor(Wages$sex, levels = c("male", "female"))
-p<-ggplot( data = Wages, aes( x = exp, y = lwage, col = sex )) + 
-  geom_jitter(aes( size = sex), alpha= 0.5) + theme_minimal()
+aggregate(Alcohol  ~ wine.class, data = wine.c, FUN = mean)
 
+
+```
+
+Maar is dit nou anders? Kunnen we deze gemiddelden bij de batch van volgend jaar weer verwachten?
+
+
+```{r }
+
+
+p <- ggplot(data = wine.c, aes( x = wine.class, y = Alcohol )) + geom_jitter(aes(color = wine.class), size = 4) + theme_minimal() 
 print(p)
+p  +  ylim(c(0,20))
 
-p + geom_smooth(level = 0.975, alpha = 0.75) # limieten waarin je werkelijke gemiddelde 0.975 keer in zit.
+lm.out <- lm( Alcohol ~ wine.class, data = wine.c) 
+summary(lm.out) 
+
+```
 
 
+Welke meting hangt het meest samen met alcohol percentage?
+Is dit onafhankelijk van het soort druif?
 
 
+```{r}
 
+# volgende hoogste correlaties met kwaliteit? hoe verhouden deze zich dan? is er een optimale combinatie van deze?
+
+cor(wine.c[, -14])[,1] # Alcohol is gecoroleerd aan bijvoorbeeld Proline
+
+p <- ggplot(data = wine.c, aes( x = Alcohol, y = Proline, color = wine.class )) + geom_point(size= 3) + theme_minimal() 
+print(p) 
+p + geom_smooth(method = 'lm') # voeg een regressielijntje toe
+
+# non linear method
+p + geom_smooth(span = 1 ) # voeg een regressielijntje toe
 
 
 
@@ -58,66 +89,87 @@ p + geom_smooth(level = 0.975, alpha = 0.75) # limieten waarin je werkelijke gem
 
 
  
-
-
- # 2: visualizatie & groeperen
+ # 2: visualizatie & 3: groeperen
   
-  * Voor het leren kennen van een dataset 
-  * Tot nieuwe inzichten komen
+  * Hoe kunnen wij nu alle alle 13 variabelen grafisch weergeven? 
+  * Exploratie/ nieuwe inzichten
+  * quality control van individuele druif batchen
   
 ```{r, echo=FALSE, eval= FALSE}
-data(Carseats, package = "ISLR")
-head(Carseats)
-dim(Carseats)
-
-library(NMF)
-# pca (visualizatie) van Wages? de numerieke? exp wks ind south married sex etc etc allemaal binair 
-Wages.num <- Wages[ , c("exp", "wks", "ind", "ed", "lwage")]
-pr.out <- prcomp(Wages.num, family = 'binomial', scale. = TRUE )
-
-biplot(pr.out, xlabs=rep(".", nrow(Wages.num)), col = as.numeric(Wages$sex), cex = 2)
 
 
-# hier cluster (visualizatie/ groeperen)
-install.packages("devtools")
-library(devtools)
 
-install_github("vqv/ggbiplot")
+# Er is altijd de mogelijkheid om alles vs alles te plotten. Bij 13 dimensies:
+pairs(wine.c, col = wine.c$wine.class) # ook hier moelijkt te zien - dimensie reductie
 
-library(ggbiplot)
-data(wine)
-head(wine)
-?wine
-wine.pca <- prcomp(wine, scale. = TRUE)
-ggbiplot(wine.pca, obs.scale = 1, var.scale = 1,
-  groups = wine.class, ellipse = TRUE, circle = TRUE) +
-  scale_color_discrete(name = '') +
+
+wine.pca <- prcomp(wine.c[, -14], scale. = TRUE)
+
+
+ggbiplot(wine.pca, obs.scale = 2, var.scale = 1,
+  ellipse = TRUE, circle = TRUE, varname.size = 6) +
+  scale_color_discrete(name = '') + theme_minimal() + 
   theme(legend.direction = 'horizontal', legend.position = 'top')
 
+ ggbiplot(wine.pca, obs.scale = 1.5, var.scale = 1,
+  ellipse = TRUE, circle = TRUE,
+  group = as.factor(wine.c[, 14]), varname.size = 6, ) +
+  scale_color_discrete(name = '') + theme_minimal() + ylim(c(-5,5)) + xlim( c(-5,5)) + 
+  theme(legend.direction = 'horizontal', legend.position = 'top')  
 
-wine.pca <- prcomp(wine, scale. = TRUE)
-print(ggbiplot(wine.pca, obs.scale = 1, var.scale = 1, groups = wine.class, ellipse = TRUE, circle = TRUE))
+ 
+ 
 
 
-install.packages("NMF")
-require(NMF)
-head(wine)
-w.class <- list(wine.class = wine.class)
-aheatmap(  wine, scale = 'column', annRow = w.class)
+wine.c.s <- scale(wine.c[, -14])
+
+aheatmap(  wine.c.s,distfun = "euclidean", annRow = wine.c$wine.class)
+
+
 
 
 ```
 
-
  # 3: predictie
- 
+  
   * Het gebruik van bestaande data om iets te voorspellen over het onbekende.
   * Alles meten zou duur kunnen zijn, wat moeten we minimaal meten voor een goede predictie?
+  * Hoe goed is onze predictie?
+  
   
 ```{r, echo=FALSE, eval= FALSE}
-  
-# random forrest en variable importance plot ( voorbeeld ISL)
-  
+ install.packages("gbm")
+
+require(gbm)
+
+wine.c.s <- data.frame(cbind(wine.c.s, wine.c$wine.class))
+set.seed(235)
+colnames(wine.c.s)[14] <- "wine.class"
+trainInd <- sample(1:nrow(wine.c.s), round(0.7 * nrow(wine.c.s), digits = 0))
+
+boost.wine = gbm(wine.class ~ ., data = wine.c.s[trainInd, ], distribution = "gaussian", 
+    n.trees = 500, shrinkage = 0.01, interaction.depth = 3)
+summary(boost.wine)
+
+
+
+predmat = predict(boost.wine, newdata = wine.c.s[-trainInd, ], n.trees =500, type = 'response' )
+predmat <- round(predmat, digits= 0)
+
+wine.c.s$wine.class[-trainInd]
+predmat[ predmat == 2   ] <- "barolo"
+predmat[ predmat == 3   ] <- "grignolino"
+predmat[ predmat == 1   ] <- "barbera"
+
+
+t.out<-table(predmat, wine.c.s[ -trainInd, "wine.class"])
+sum(diag(t.out))/ sum(t.out) 
+
+
+
+
+
+
 ```  
   
   
